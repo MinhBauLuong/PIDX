@@ -105,6 +105,8 @@ PIDX_return_code PIDX_file_create(const char* filename, PIDX_flags flags, PIDX_a
 ///
 PIDX_return_code PIDX_file_open(const char* filename, PIDX_flags flags, PIDX_access access, PIDX_point dims, PIDX_file* file);
 
+PIDX_return_code PIDX_file_open_serial(const char* filename, PIDX_flags flags, PIDX_access access, PIDX_point dims, PIDX_file* file);
+
 
 
 ///
