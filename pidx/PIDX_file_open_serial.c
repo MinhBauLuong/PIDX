@@ -558,13 +558,3 @@ PIDX_return_code PIDX_file_open_serial(const char* filename, PIDX_flags flags, P
   return PIDX_success;
 }
 
-
-PIDX_return_code PIDX_query_box(PIDX_file file, PIDX_point box_dims)
-{
-  if(!file)
-    return PIDX_err_file;
-
-  memcpy(file->idx->box_bounds, box_dims, PIDX_MAX_DIMENSIONS * sizeof(unsigned long long));
-
-  return PIDX_success;
-}
