@@ -1,7 +1,7 @@
 #include "PIDX_file_handler.h"
 
 /// Function to get file descriptor when opening an existing IDX file
-PIDX_return_code PIDX_file_open(const char* filename, PIDX_flags flags, PIDX_access access_type, PIDX_point dims, PIDX_file* file)
+PIDX_return_code PIDX_file_open_serial(const char* filename, PIDX_flags flags, PIDX_access access_type, PIDX_point dims, PIDX_file* file)
 {
   int i;
   char file_name_skeleton[1024];
@@ -28,7 +28,7 @@ PIDX_return_code PIDX_file_open(const char* filename, PIDX_flags flags, PIDX_acc
 
   (*file)->idx_d->time = malloc(sizeof (*((*file)->idx_d->time)));
   memset((*file)->idx_d->time, 0, sizeof (*((*file)->idx_d->time)));
-  (*file)->idx_d->time->sim_start = PIDX_get_time();
+  (*file)->idx_d->time->sim_start = 0;//PIDX_get_time();
 
   (*file)->idx_c->global_comm = access_type->comm;
   (*file)->idx_c->local_comm = access_type->comm;
