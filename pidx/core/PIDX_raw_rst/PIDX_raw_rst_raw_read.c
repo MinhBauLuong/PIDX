@@ -1,4 +1,5 @@
 #define INVERT_ENDIANESS 1
+#include "immintrin.h"
 #include "../../PIDX_inc.h"
 
 static int maximum_neighbor_count = 256;
@@ -359,12 +360,40 @@ PIDX_return_code PIDX_raw_rst_forced_raw_read(PIDX_raw_rst_id rst_id)
                   float temp;
                   float temp2;
 
-                  for (y = 0; y < send_c * var->vps * (var->bpv/8) / sizeof(float); y++)
+                  const size_t num_floats = send_c * var->vps * (var->bpv/8) / sizeof(float);
+                  const size_t vec_width = 8;
+#if 1
+#pragma omp parallel for schedule(static)
+                  for (y = 0; y < num_floats / vec_width; y++)
+                  {
+                    float *f = (float*)(var_grp->variable[start_index]->sim_patch[pc1]->buffer
+                                + (recv_o * var->vps * (var->bpv/8)) + (y * sizeof(float) * vec_width));
+                    const __m256i shuffle_mask = _mm256_set1_epi32(0x0123);
+                    __m256 vals = _mm256_loadu_ps(f);
+                    vals = (__m256)_mm256_shuffle_epi8((__m256i)vals, shuffle_mask);
+                    _mm256_storeu_ps(f, vals);
+
+#else
+                  for (y = 0; y < num_floats; y++)
                   {
                     memcpy(&temp, var_grp->variable[start_index]->sim_patch[pc1]->buffer + (recv_o * var->vps * (var->bpv/8)) + (y * sizeof(float)), sizeof(float));
                     bit32_reverse_endian((unsigned char*)&temp, (unsigned char*)&temp2);
                     memcpy(var_grp->variable[start_index]->sim_patch[pc1]->buffer + (recv_o * var->vps * (var->bpv/8)) + (y * sizeof(float)), &temp2, sizeof(float));
+#endif
                   }
+#if 1
+                  if (num_floats % vec_width != 0) {
+                    for (y = 0; y < num_floats % vec_width; y++)
+                    {
+                      float *f = (float*)(var_grp->variable[start_index]->sim_patch[pc1]->buffer
+                          + (recv_o * var->vps * (var->bpv/8))
+                          + (num_floats / vec_width) * vec_width * sizeof(float)
+                          + (y * sizeof(float)));
+                      int val = _bswap(*(int*)f);
+                      *f = *(float*)&val;
+                    }
+                  }
+#endif
                 }
                 else if (var->bpv/8 == 8 || var->bpv/8 == 24)
                 {
