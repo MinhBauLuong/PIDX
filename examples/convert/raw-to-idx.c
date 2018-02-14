@@ -157,12 +157,12 @@ int main(int argc, char **argv)
     PIDX_set_variable_count(file, variable_count);
     PIDX_set_current_time_step(file, t);
 
-	PIDX_point rst_box_size;
-	PIDX_set_point(rst_box_size, restructured_box_size[0], restructured_box_size[1],
-			restructured_box_size[2]);
+    PIDX_point rst_box_size;
+    PIDX_set_point(rst_box_size, restructured_box_size[0], restructured_box_size[1],
+        restructured_box_size[2]);
     PIDX_set_restructuring_box(file, rst_box_size);
 
-	PIDX_set_io_mode(file, PIDX_RAW_IO);
+    PIDX_set_io_mode(file, PIDX_RAW_IO);
     for(var = 0; var < variable_count; var++)
     {
       ret = PIDX_variable_create(var_name[var], sizeof(double) * 8, "1*float64", &variable[var]);
