@@ -1,20 +1,43 @@
-/*****************************************************
- **  PIDX Parallel I/O Library            **
- **  Copyright (c) 2010-2014 University of Utah   **
- **  Scientific Computing and Imaging Institute   **
- **  72 S Central Campus Drive, Room 3750       **
- **  Salt Lake City, UT 84112             **
- **                         **
- **  PIDX is licensed under the Creative Commons  **
- **  Attribution-NonCommercial-NoDerivatives 4.0  **
- **  International License. See LICENSE.md.     **
- **                         **
- **  For information about this project see:    **
- **  http://www.cedmav.com/pidx           **
- **  or contact: pascucci@sci.utah.edu        **
- **  For support: PIDX-support@visus.net      **
- **                         **
- *****************************************************/
+/*
+ * BSD 3-Clause License
+ * 
+ * Copyright (c) 2010-2018 ViSUS L.L.C., 
+ * Scientific Computing and Imaging Institute of the University of Utah
+ * 
+ * ViSUS L.L.C., 50 W. Broadway, Ste. 300, 84101-2044 Salt Lake City, UT
+ * University of Utah, 72 S Central Campus Dr, Room 3750, 84112 Salt Lake City, UT
+ *  
+ * All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * * Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
+ * 
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ * 
+ * * Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * 
+ * For additional information about this project contact: pascucci@acm.org
+ * For support: support@visus.net
+ * 
+ */
 
 
 #include "../../PIDX_inc.h"
@@ -59,7 +82,7 @@ PIDX_return_code HELPER_Hz_encode(PIDX_hz_encode_id id)
               fvalue_1 = 100 + v + s + (id->idx->bounds[0] * id->idx->bounds[1]*(ZYX[2]))+(id->idx->bounds[0]*(ZYX[1])) + ZYX[0];
               fvalue_2 = *(*((float**)var->hz_buffer->buffer + i) + ((k * var->vps) + s));
 
-              //if (file->idx_c->lrank == 0)
+              //if (file->idx_c->partition_rank == 0)
               //fprintf(stderr, "%f %f\n", fvalue_1, fvalue_2);
               check_bit = check_bit && (fvalue_1 == fvalue_2);
             }
@@ -76,7 +99,7 @@ PIDX_return_code HELPER_Hz_encode(PIDX_hz_encode_id id)
             }
             if (strcmp(var->type_name, UINT64) == 0)
             {
-              uvalue_1 = v + s + (id->idx->bounds[0] * id->idx->bounds[1]*(ZYX[2]))+(id->idx->bounds[0]*(ZYX[1])) + ZYX[0] + (id->idx_d->color * id->idx->bounds[0] * id->idx->bounds[1] * id->idx->bounds[2]);
+              uvalue_1 = v + s + (id->idx->bounds[0] * id->idx->bounds[1]*(ZYX[2]))+(id->idx->bounds[0]*(ZYX[1])) + ZYX[0] + (id->idx_c->color * id->idx->bounds[0] * id->idx->bounds[1] * id->idx->bounds[2]);
               uvalue_2 = *(*((unsigned long long**)var->hz_buffer->buffer + i) + ((k * var->vps) + s));
               check_bit = check_bit && (uvalue_1  == uvalue_2);
             }
@@ -84,7 +107,7 @@ PIDX_return_code HELPER_Hz_encode(PIDX_hz_encode_id id)
             {
               for (s = 0; s < 3; s++)
               {
-                uvalue_1 = v + s + (id->idx->bounds[0] * id->idx->bounds[1]*(ZYX[2]))+(id->idx->bounds[0]*(ZYX[1])) + ZYX[0] + (id->idx_d->color * id->idx->bounds[0] * id->idx->bounds[1] * id->idx->bounds[2]);
+                uvalue_1 = v + s + (id->idx->bounds[0] * id->idx->bounds[1]*(ZYX[2]))+(id->idx->bounds[0]*(ZYX[1])) + ZYX[0] + (id->idx_c->color * id->idx->bounds[0] * id->idx->bounds[1] * id->idx->bounds[2]);
                 memcpy(&uvalue_2, var->hz_buffer->buffer[i] + ((k * 3) + s) * sizeof(double), sizeof(double));
 
                 check_bit = check_bit && (uvalue_1  == uvalue_2);
@@ -103,24 +126,24 @@ PIDX_return_code HELPER_Hz_encode(PIDX_hz_encode_id id)
   }
 
   unsigned long long global_volume = 0;
-  MPI_Allreduce(&element_count, &global_volume, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, id->idx_c->local_comm);
+  MPI_Allreduce(&element_count, &global_volume, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, id->idx_c->partition_comm);
 
   //fprintf(stderr, "[HZ] Volume [%lld] and Volume [%lld]\n", global_volume, (unsigned long long)(id->idx->bounds[0] * id->idx->bounds[1] * id->idx->bounds[2] * (id->last_index - id->first_index + 1)));
 
   if (global_volume != (unsigned long long) id->idx->bounds[0] * id->idx->bounds[1] * id->idx->bounds[2] * (id->last_index - id->first_index + 1))
   {
-    if (id->idx_c->lrank == 0)
-      fprintf(stderr, "[HZ Debug FAILED!!!!] [Color %d] [Recorded Volume %lld] [Actual Volume %lld]\n", id->idx_d->color, (long long) global_volume, (long long) id->idx->bounds[0] * id->idx->bounds[1] * id->idx->bounds[2] * (id->last_index - id->first_index + 1));
+    if (id->idx_c->partition_rank == 0)
+      fprintf(stderr, "[HZ Debug FAILED!!!!] [Color %d] [Recorded Volume %lld] [Actual Volume %lld]\n", id->idx_c->color, (long long) global_volume, (long long) id->idx->bounds[0] * id->idx->bounds[1] * id->idx->bounds[2] * (id->last_index - id->first_index + 1));
 
-    if (id->idx_c->lrank == 0)
-      fprintf(stderr, "[HZ]  file->idx_c->lrank %d Color %d [LOST ELEMENT COUNT %lld] [FOUND ELEMENT COUNT %lld] [TOTAL ELEMNTS %lld] \n", id->idx_c->lrank,  id->idx_d->color, (long long) lost_element_count, (long long) element_count, (long long) (id->idx->bounds[0] * id->idx->bounds[1] * id->idx->bounds[2]) * (id->last_index - id->first_index + 1));
+    if (id->idx_c->partition_rank == 0)
+      fprintf(stderr, "[HZ]  file->idx_c->partition_rank %d Color %d [LOST ELEMENT COUNT %lld] [FOUND ELEMENT COUNT %lld] [TOTAL ELEMNTS %lld] \n", id->idx_c->partition_rank,  id->idx_c->color, (long long) lost_element_count, (long long) element_count, (long long) (id->idx->bounds[0] * id->idx->bounds[1] * id->idx->bounds[2]) * (id->last_index - id->first_index + 1));
 
     return PIDX_err_hz;
   }
   else
   {
-    if (id->idx_c->lrank == 0)
-      fprintf(stderr, "[HZ Debug PASSED!!!!]  [Color %d] [Recorded Volume %lld] [Actual Volume %lld] [Lost Elemet COunt %lld]\n", id->idx_d->color, (long long) global_volume, (long long) id->idx->bounds[0] * id->idx->bounds[1] * id->idx->bounds[2] * (id->last_index - id->first_index + 1), (long long) lost_element_count);
+    if (id->idx_c->partition_rank == 0)
+      fprintf(stderr, "[HZ Debug PASSED!!!!]  [Color %d] [Recorded Volume %lld] [Actual Volume %lld] [Lost Elemet COunt %lld]\n", id->idx_c->color, (long long) global_volume, (long long) id->idx->bounds[0] * id->idx->bounds[1] * id->idx->bounds[2] * (id->last_index - id->first_index + 1), (long long) lost_element_count);
   }
 
   return PIDX_success;

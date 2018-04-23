@@ -1,20 +1,43 @@
-/*****************************************************
- **  PIDX Parallel I/O Library            **
- **  Copyright (c) 2010-2014 University of Utah   **
- **  Scientific Computing and Imaging Institute   **
- **  72 S Central Campus Drive, Room 3750       **
- **  Salt Lake City, UT 84112             **
- **                         **
- **  PIDX is licensed under the Creative Commons  **
- **  Attribution-NonCommercial-NoDerivatives 4.0  **
- **  International License. See LICENSE.md.     **
- **                         **
- **  For information about this project see:    **
- **  http://www.cedmav.com/pidx           **
- **  or contact: pascucci@sci.utah.edu        **
- **  For support: PIDX-support@visus.net      **
- **                         **
- *****************************************************/
+/*
+ * BSD 3-Clause License
+ * 
+ * Copyright (c) 2010-2018 ViSUS L.L.C., 
+ * Scientific Computing and Imaging Institute of the University of Utah
+ * 
+ * ViSUS L.L.C., 50 W. Broadway, Ste. 300, 84101-2044 Salt Lake City, UT
+ * University of Utah, 72 S Central Campus Dr, Room 3750, 84112 Salt Lake City, UT
+ *  
+ * All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * * Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
+ * 
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ * 
+ * * Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * 
+ * For additional information about this project contact: pascucci@acm.org
+ * For support: support@visus.net
+ * 
+ */
 
 #include "../../PIDX_inc.h"
 #define MAX_TEMPLATE_DEPTH 6
@@ -90,7 +113,7 @@ int PIDX_header_io_idx_file_create(PIDX_header_io_id header_io_id, PIDX_block_la
 
   for (i = 0; i < header_io_id->idx_d->max_file_count; i++)
   {
-    if (i % header_io_id->idx_c->lnprocs == header_io_id->idx_c->lrank && block_layout->file_bitmap[i] == 1)
+    if (i % header_io_id->idx_c->partition_nprocs == header_io_id->idx_c->partition_rank && block_layout->file_bitmap[i] == 1)
     {
       ret = generate_file_name(header_io_id->idx->blocks_per_file, filename_template, /*adjusted_file_index*/ i, bin_file, PATH_MAX);
       if (ret == 1)
@@ -135,7 +158,7 @@ int PIDX_header_io_idx_file_create(PIDX_header_io_id header_io_id, PIDX_block_la
     }
   }
 
-  MPI_Barrier(header_io_id->idx_c->local_comm);
+  MPI_Barrier(header_io_id->idx_c->partition_comm);
 
   return PIDX_success;
 }
@@ -163,7 +186,7 @@ int PIDX_header_io_raw_dir_create(PIDX_header_io_id header_io_id, char* file_nam
   sprintf(data_set_path, "%s/time%09d/", directory_path, header_io_id->idx->current_time_step);
   free(directory_path);
 
-  if (header_io_id->idx_c->lrank == 0)
+  if (header_io_id->idx_c->partition_rank == 0)
   {
     //TODO: the logic for creating the subdirectory hierarchy could
     //be made to be more efficient than this. This implementation
@@ -201,7 +224,7 @@ int PIDX_header_io_raw_dir_create(PIDX_header_io_id header_io_id, char* file_nam
       }
     }
   }
-  MPI_Barrier(header_io_id->idx_c->local_comm);
+  MPI_Barrier(header_io_id->idx_c->partition_comm);
 
   free(data_set_path);
 
@@ -220,15 +243,15 @@ PIDX_return_code PIDX_header_io_idx_file_write(PIDX_header_io_id header_io_id, P
   {
     if (block_layout->file_bitmap[i] == 1)
     {
-      if (header_io_id->idx_c->grank == 0)
-        fprintf(stderr, "[%d] File %d being populated\n", header_io_id->idx_c->lnprocs, i);
+      if (header_io_id->idx_c->simulation_rank == 0)
+        fprintf(stderr, "[%d] File %d being populated\n", header_io_id->idx_c->partition_nprocs, i);
     }
   }
 #endif
 
   for (i = 0; i < header_io_id->idx_d->max_file_count; i++)
   {
-    if (i % header_io_id->idx_c->lnprocs == header_io_id->idx_c->lrank && block_layout->file_bitmap[i] == 1)
+    if (i % header_io_id->idx_c->partition_nprocs == header_io_id->idx_c->partition_rank && block_layout->file_bitmap[i] == 1)
     {
       ret = generate_file_name(header_io_id->idx->blocks_per_file, filename_template, i, bin_file, PATH_MAX);
       if (ret == 1)
@@ -318,7 +341,7 @@ PIDX_return_code PIDX_header_io_global_idx_write (PIDX_header_io_id header_io, c
     return 1;
   }
 
-  if (header_io->idx_c->lrank == 0)
+  if (header_io->idx_c->partition_rank == 0)
   {
     int ret = 0, j = 0;
     char last_path[PATH_MAX] = {0};
@@ -329,7 +352,7 @@ PIDX_return_code PIDX_header_io_global_idx_write (PIDX_header_io_id header_io, c
     if ((pos = strrchr(this_path, '/')))
     {
       pos[1] = '\0';
-      if (!strcmp(this_path, last_path) == 0)
+      if (!(strcmp(this_path, last_path) == 0))
       {
         //this file is in a previous directory than the last
         //one; we need to make sure that it exists and create
@@ -354,7 +377,6 @@ PIDX_return_code PIDX_header_io_global_idx_write (PIDX_header_io_id header_io, c
       }
     }
 
-
     idx_file_p = fopen(data_set_path, "w");
     if (!idx_file_p)
     {
@@ -362,24 +384,26 @@ PIDX_return_code PIDX_header_io_global_idx_write (PIDX_header_io_id header_io, c
       return -1;
     }
 
-    fprintf(idx_file_p, "(version)\n6\n");
+    fprintf(idx_file_p, "(version)\n%s\n", PIDX_CURR_METADATA_VERSION);
 
     if (header_io->idx->io_type == PIDX_IDX_IO)
-      fprintf(idx_file_p, "(io mode)\n1\n");
+      fprintf(idx_file_p, "(io mode)\nidx\n");
     else if (header_io->idx->io_type == PIDX_GLOBAL_PARTITION_IDX_IO)
-      fprintf(idx_file_p, "(io mode)\n2\n");
+      fprintf(idx_file_p, "(io mode)\ng_part_idx\n");
     else if (header_io->idx->io_type == PIDX_LOCAL_PARTITION_IDX_IO)
-      fprintf(idx_file_p, "(io mode)\n3\n");
+      fprintf(idx_file_p, "(io mode)\nl_part_idx\n");
     else if (header_io->idx->io_type == PIDX_RAW_IO)
-      fprintf(idx_file_p, "(io mode)\n4\n");
+      fprintf(idx_file_p, "(io mode)\nraw\n");
 
-    fprintf(idx_file_p, "(logic_to_physic)\n%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf\n", header_io->idx->transform[0], header_io->idx->transform[1], header_io->idx->transform[2], header_io->idx->transform[3], header_io->idx->transform[4], header_io->idx->transform[5], header_io->idx->transform[6], header_io->idx->transform[7], header_io->idx->transform[8], header_io->idx->transform[9], header_io->idx->transform[10], header_io->idx->transform[11], header_io->idx->transform[12], header_io->idx->transform[13], header_io->idx->transform[14], header_io->idx->transform[15]);
     fprintf(idx_file_p, "(box)\n0 %lld 0 %lld 0 %lld 0 0 0 0\n", (long long)(header_io->idx->bounds[0] - 1), (long long)(header_io->idx->bounds[1] - 1), (long long)(header_io->idx->bounds[2] - 1));
+    fprintf(idx_file_p, "(physical box)\n0 %f 0 %f 0 %f 0 0 0 0\n", header_io->idx->physical_bounds[0], header_io->idx->physical_bounds[1], header_io->idx->physical_bounds[2]);
 
     fprintf(idx_file_p, "(partition count)\n%d %d %d\n", header_io->idx_d->partition_count[0], header_io->idx_d->partition_count[1], header_io->idx_d->partition_count[2]);
 
-    fprintf(idx_file_p, "(endian)\n%d\n", header_io->idx->endian);
-    fprintf(idx_file_p, "(cores)\n%d\n", header_io->idx_c->gnprocs);
+    if(header_io->idx->endian == PIDX_LITTLE_ENDIAN)
+      fprintf(idx_file_p, "(endian)\nlittle\n");
+    else if(header_io->idx->endian == PIDX_BIG_ENDIAN)
+      fprintf(idx_file_p, "(endian)\nbig\n");
 
     fprintf(idx_file_p, "(compression bit rate)\n%f\n", header_io->idx->compression_bit_rate);
     fprintf(idx_file_p, "(compression type)\n%d\n", header_io->idx->compression_type);
@@ -470,7 +494,7 @@ PIDX_return_code PIDX_header_io_partition_idx_write (PIDX_header_io_id header_io
     return 1;
   }
 
-  if (header_io->idx_c->lrank == 0)
+  if (header_io->idx_c->partition_rank == 0)
   {
     idx_file_p = fopen(data_set_path, "w");
     if (!idx_file_p)
@@ -479,29 +503,32 @@ PIDX_return_code PIDX_header_io_partition_idx_write (PIDX_header_io_id header_io
       return -1;
     }
 
-    fprintf(idx_file_p, "(version)\n6\n");
+    fprintf(idx_file_p, "(version)\n%s\n", PIDX_CURR_METADATA_VERSION);
 
     if (header_io->idx->io_type == PIDX_IDX_IO)
-      fprintf(idx_file_p, "(io mode)\n1\n");
+      fprintf(idx_file_p, "(io mode)\nidx\n");
     else if (header_io->idx->io_type == PIDX_GLOBAL_PARTITION_IDX_IO)
-      fprintf(idx_file_p, "(io mode)\n2\n");
+      fprintf(idx_file_p, "(io mode)\ng_part_idx\n");
     else if (header_io->idx->io_type == PIDX_LOCAL_PARTITION_IDX_IO)
-      fprintf(idx_file_p, "(io mode)\n3\n");
+      fprintf(idx_file_p, "(io mode)\nl_part_idx\n");
     else if (header_io->idx->io_type == PIDX_RAW_IO)
-      fprintf(idx_file_p, "(io mode)\n4\n");
+      fprintf(idx_file_p, "(io mode)\nraw\n");
 
-    fprintf(idx_file_p, "(logic_to_physic)\n%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf\n", header_io->idx->transform[0], header_io->idx->transform[1], header_io->idx->transform[2], header_io->idx->transform[3], header_io->idx->transform[4], header_io->idx->transform[5], header_io->idx->transform[6], header_io->idx->transform[7], header_io->idx->transform[8], header_io->idx->transform[9], header_io->idx->transform[10], header_io->idx->transform[11], header_io->idx->transform[12], header_io->idx->transform[13], header_io->idx->transform[14], header_io->idx->transform[15]);
     fprintf(idx_file_p, "(box)\n0 %lld 0 %lld 0 %lld 0 0 0 0\n", (long long)(header_io->idx->bounds[0] - 1), (long long)(header_io->idx->bounds[1] - 1), (long long)(header_io->idx->bounds[2] - 1));
 
     fprintf(idx_file_p, "(partition size)\n%d %d %d\n", header_io->idx_d->partition_size[0], header_io->idx_d->partition_size[1], header_io->idx_d->partition_size[2]);
 
     fprintf(idx_file_p, "(partition offset)\n%d %d %d\n", header_io->idx_d->partition_offset[0], header_io->idx_d->partition_offset[1], header_io->idx_d->partition_offset[2]);
 
-    fprintf(idx_file_p, "(partition index)\n%d\n", header_io->idx_d->color);
+    fprintf(idx_file_p, "(partition index)\n%d\n", header_io->idx_c->color);
 
-    fprintf(idx_file_p, "(endian)\n%d\n", header_io->idx->endian);
+    if(header_io->idx->endian == PIDX_LITTLE_ENDIAN)
+      fprintf(idx_file_p, "(endian)\nlittle\n");
+    else if(header_io->idx->endian == PIDX_BIG_ENDIAN)
+      fprintf(idx_file_p, "(endian)\nbig\n");
+    
     fprintf(idx_file_p, "(restructure box size)\n%lld %lld %lld\n", (long long)header_io->idx_d->restructured_grid->patch_size[0], (long long)header_io->idx_d->restructured_grid->patch_size[1], (long long)header_io->idx_d->restructured_grid->patch_size[2]);
-    fprintf(idx_file_p, "(cores)\n%d\n", header_io->idx_c->gnprocs);
+    fprintf(idx_file_p, "(cores)\n%d\n", header_io->idx_c->simulation_nprocs);
 
     fprintf(idx_file_p, "(compression bit rate)\n%f\n", header_io->idx->compression_bit_rate);
     fprintf(idx_file_p, "(compression type)\n%d\n", header_io->idx->compression_type);
@@ -592,7 +619,7 @@ PIDX_return_code PIDX_header_io_raw_idx_write (PIDX_header_io_id header_io, char
     return 1;
   }
 
-  if (header_io->idx_c->lrank == 0)
+  if (header_io->idx_c->partition_rank == 0)
   {
     idx_file_p = fopen(data_set_path, "w");
     if (!idx_file_p)
@@ -601,23 +628,27 @@ PIDX_return_code PIDX_header_io_raw_idx_write (PIDX_header_io_id header_io, char
       return -1;
     }
 
-    fprintf(idx_file_p, "(version)\n6\n");
+    fprintf(idx_file_p, "(version)\n%s\n", PIDX_CURR_METADATA_VERSION);
 
     if (header_io->idx->io_type == PIDX_IDX_IO)
-      fprintf(idx_file_p, "(io mode)\n1\n");
+      fprintf(idx_file_p, "(io mode)\nidx\n");
     else if (header_io->idx->io_type == PIDX_GLOBAL_PARTITION_IDX_IO)
-      fprintf(idx_file_p, "(io mode)\n2\n");
+      fprintf(idx_file_p, "(io mode)\ng_part_idx\n");
     else if (header_io->idx->io_type == PIDX_LOCAL_PARTITION_IDX_IO)
-      fprintf(idx_file_p, "(io mode)\n3\n");
+      fprintf(idx_file_p, "(io mode)\nl_part_idx\n");
     else if (header_io->idx->io_type == PIDX_RAW_IO)
-      fprintf(idx_file_p, "(io mode)\n4\n");
+      fprintf(idx_file_p, "(io mode)\nraw\n");
 
-    fprintf(idx_file_p, "(logic_to_physic)\n%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf\n", header_io->idx->transform[0], header_io->idx->transform[1], header_io->idx->transform[2], header_io->idx->transform[3], header_io->idx->transform[4], header_io->idx->transform[5], header_io->idx->transform[6], header_io->idx->transform[7], header_io->idx->transform[8], header_io->idx->transform[9], header_io->idx->transform[10], header_io->idx->transform[11], header_io->idx->transform[12], header_io->idx->transform[13], header_io->idx->transform[14], header_io->idx->transform[15]);
     fprintf(idx_file_p, "(box)\n0 %lld 0 %lld 0 %lld 0 0 0 0\n", (long long)(header_io->idx->bounds[0] - 1), (long long)(header_io->idx->bounds[1] - 1), (long long)(header_io->idx->bounds[2] - 1));
+    fprintf(idx_file_p, "(physical box)\n0 %f 0 %f 0 %f 0 0 0 0\n", header_io->idx->physical_bounds[0], header_io->idx->physical_bounds[1], header_io->idx->physical_bounds[2]);
 
-    fprintf(idx_file_p, "(endian)\n%d\n", header_io->idx->endian);
+    if(header_io->idx->endian == PIDX_LITTLE_ENDIAN)
+      fprintf(idx_file_p, "(endian)\nlittle\n");
+    else if(header_io->idx->endian == PIDX_BIG_ENDIAN)
+      fprintf(idx_file_p, "(endian)\nbig\n");
+    
     fprintf(idx_file_p, "(restructure box size)\n%lld %lld %lld\n", (long long)header_io->idx_d->restructured_grid->patch_size[0], (long long)header_io->idx_d->restructured_grid->patch_size[1], (long long)header_io->idx_d->restructured_grid->patch_size[2]);
-    fprintf(idx_file_p, "(cores)\n%d\n", header_io->idx_c->gnprocs);
+    fprintf(idx_file_p, "(cores)\n%d\n", header_io->idx_c->simulation_nprocs);
 
     fprintf(idx_file_p, "(compression bit rate)\n%f\n", header_io->idx->compression_bit_rate);
     fprintf(idx_file_p, "(compression type)\n%d\n", header_io->idx->compression_type);
@@ -689,7 +720,7 @@ static int write_meta_data(PIDX_header_io_id header_io_id, PIDX_block_layout blo
     }
 
 #if 0
-    fprintf(stderr, "writing the header %d\n", header_io_id->idx_c->grank);
+    fprintf(stderr, "writing the header %d\n", header_io_id->idx_c->simulation_rank);
 #endif
 
     ret = MPI_File_write_at(fh, 0, headers, total_header_size, MPI_BYTE, &status);

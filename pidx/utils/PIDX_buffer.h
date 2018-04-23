@@ -15,38 +15,22 @@
  **  For support: PIDX-support@visus.net            **
  **                                                 **
  *****************************************************/
+ 
+#ifndef __PIDX_BUFFER_H
+#define __PIDX_BUFFER_H
 
-#include <unistd.h>
-#include <stdarg.h>
-#include <stdint.h>
-#include <getopt.h>
-#include <string.h>
-#include <assert.h>
-#include <errno.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdlib.h>
+// A resizeable buffer, similar to std::vector
+typedef struct PIDX_buffer {
+  unsigned char *buffer;
+  size_t size;
+  size_t capacity;
+} PIDX_buffer;
 
-#if PIDX_HAVE_MPI
-  #include <mpi.h>
+PIDX_buffer PIDX_buffer_create_empty();
+PIDX_buffer PIDX_buffer_create_with_capacity(size_t capacity);
+void PIDX_buffer_free(PIDX_buffer *b);
+void PIDX_buffer_append(PIDX_buffer *b, const unsigned char *data, const size_t size);
+void PIDX_buffer_resize(PIDX_buffer *b, const size_t size);
+
 #endif
 
-
-/// main
-int main(int argc, char **argv)
-{
-
-  int nprocs, rank;
-#if PIDX_HAVE_MPI
-  /// MPI initialization
-  MPI_Init(&argc, &argv);
-  MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-#endif
-
-
-#if PIDX_HAVE_MPI
-  MPI_Finalize();
-#endif
-  return 0;
-}

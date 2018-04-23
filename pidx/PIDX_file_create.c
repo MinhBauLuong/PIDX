@@ -1,3 +1,43 @@
+/*
+ * BSD 3-Clause License
+ * 
+ * Copyright (c) 2010-2018 ViSUS L.L.C., 
+ * Scientific Computing and Imaging Institute of the University of Utah
+ * 
+ * ViSUS L.L.C., 50 W. Broadway, Ste. 300, 84101-2044 Salt Lake City, UT
+ * University of Utah, 72 S Central Campus Dr, Room 3750, 84112 Salt Lake City, UT
+ *  
+ * All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * * Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
+ * 
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ * 
+ * * Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * 
+ * For additional information about this project contact: pascucci@acm.org
+ * For support: support@visus.net
+ * 
+ */
 #include "PIDX_file_handler.h"
 
 
@@ -55,17 +95,23 @@ PIDX_return_code PIDX_file_create(const char* filename, PIDX_flags flags, PIDX_a
 
   (*file)->flags = flags;
 
-  memcpy((*file)->idx->bounds, dims, PIDX_MAX_DIMENSIONS * sizeof(unsigned long long));
-  memcpy((*file)->idx->box_bounds, dims, PIDX_MAX_DIMENSIONS * sizeof(unsigned long long));
+  if (dims != NULL)
+  {
+    memcpy((*file)->idx->bounds, dims, PIDX_MAX_DIMENSIONS * sizeof(unsigned long long));
+    memcpy((*file)->idx->box_bounds, dims, PIDX_MAX_DIMENSIONS * sizeof(unsigned long long));
+  }
 
   (*file)->idx->bits_per_block = PIDX_default_bits_per_block;
   (*file)->idx_d->samples_per_block = (int)pow(2, PIDX_default_bits_per_block);
 
-  if (dims[0] * dims[1] * dims[2] < (*file)->idx_d->samples_per_block)
+  if (dims != NULL)
   {
-    // ensure blocksize is a subset of the total volume.
-    (*file)->idx_d->samples_per_block = getPowerOf2(dims[0] * dims[1] * dims[2]) >> 1;
-    (*file)->idx->bits_per_block = getNumBits((*file)->idx_d->samples_per_block) - 1;
+    if (dims[0] * dims[1] * dims[2] < (*file)->idx_d->samples_per_block)
+    {
+      // ensure blocksize is a subset of the total volume.
+      (*file)->idx_d->samples_per_block = getPowerOf2(dims[0] * dims[1] * dims[2]) >> 1;
+      (*file)->idx->bits_per_block = getNumBits((*file)->idx_d->samples_per_block) - 1;
+    }
   }
   //fprintf(stderr, "BPB %d SPB %d D %d\n", (*file)->idx->bits_per_block, (*file)->idx_d->samples_per_block, getPowerOf2(dims[0] * dims[1] * dims[2]));
 
@@ -78,7 +124,8 @@ PIDX_return_code PIDX_file_create(const char* filename, PIDX_flags flags, PIDX_a
   for (i = 0; i < PIDX_MAX_DIMENSIONS; i++)
   {
     (*file)->idx_d->partition_count[i] = 1;
-    (*file)->idx_d->partition_size[i] = getPowerOf2(dims[i]);
+    if (dims != NULL)
+      (*file)->idx_d->partition_size[i] = getPowerOf2(dims[i]);
     (*file)->idx_d->partition_offset[i] = 0;
   }
 
@@ -96,28 +143,20 @@ PIDX_return_code PIDX_file_create(const char* filename, PIDX_flags flags, PIDX_a
   (*file)->flush_used = 0;
   (*file)->write_on_close = 0;
 
-  (*file)->idx_d->color = 0;
+  (*file)->idx_c->color = 0;
   (*file)->idx->io_type = PIDX_IDX_IO;
-  (*file)->idx_d->data_core_count = -1;
-
-  (*file)->idx_d->wavelet_levels = 0;
-  (*file)->idx_d->wavelet_imeplementation_type = -1;//WAVELET_STENCIL;
 
   (*file)->idx_d->reduced_res_from = 0;
   (*file)->idx_d->reduced_res_to = 0;
 
   (*file)->idx_d->raw_io_pipe_length = 0;
 
-  (*file)->idx_c->global_comm = access_type->comm;
-  (*file)->idx_c->local_comm = access_type->comm;
-  MPI_Comm_rank((*file)->idx_c->global_comm, &((*file)->idx_c->grank));
-  MPI_Comm_size((*file)->idx_c->global_comm, &((*file)->idx_c->gnprocs));
-  MPI_Comm_rank((*file)->idx_c->local_comm, &((*file)->idx_c->lrank));
-  MPI_Comm_size((*file)->idx_c->local_comm, &((*file)->idx_c->lnprocs));
-
-  (*file)->idx_c->gnproc_x = -1;
-  (*file)->idx_c->gnproc_y = -1;
-  (*file)->idx_c->gnproc_z = -1;
+  (*file)->idx_c->simulation_comm = access_type->comm;
+  (*file)->idx_c->partition_comm = access_type->comm;
+  MPI_Comm_rank((*file)->idx_c->simulation_comm, &((*file)->idx_c->simulation_rank));
+  MPI_Comm_size((*file)->idx_c->simulation_comm, &((*file)->idx_c->simulation_nprocs));
+  MPI_Comm_rank((*file)->idx_c->partition_comm, &((*file)->idx_c->partition_rank));
+  MPI_Comm_size((*file)->idx_c->partition_comm, &((*file)->idx_c->partition_nprocs));
 
 
   (*file)->idx->enable_agg = 1;
@@ -140,12 +179,6 @@ PIDX_return_code PIDX_file_create(const char* filename, PIDX_flags flags, PIDX_a
   sprintf((*file)->idx->filename_partition, "%s_0.idx", file_name_skeleton);
 
   (*file)->idx->blocks_per_file = PIDX_default_blocks_per_file;
-
-  //initialize logic_to_physic transform to identity
-  (*file)->idx->transform[0]  = 1.0;
-  (*file)->idx->transform[5]  = 1.0;
-  (*file)->idx->transform[10] = 1.0;
-  (*file)->idx->transform[15] = 1.0;
 
   (*file)->idx->variable_group_count = 1;
 
@@ -182,7 +215,7 @@ PIDX_return_code PIDX_file_create(const char* filename, PIDX_flags flags, PIDX_a
     memset((*file)->idx->variable_grp[i], 0, sizeof(*((*file)->idx->variable_grp[i])));
   }
 
-  if ((*file)->idx_c->grank == 0)
+  if ((*file)->idx_c->simulation_rank == 0)
   {
     //TODO: close and delete the file (there is a way to do this automatically by fopen...)
     struct stat stat_buf;
@@ -201,16 +234,16 @@ PIDX_return_code PIDX_file_create(const char* filename, PIDX_flags flags, PIDX_a
 #endif
   }
 
-  MPI_Bcast(&((*file)->idx_d->fs_block_size), 1, MPI_INT, 0, (*file)->idx_c->global_comm);
+  MPI_Bcast(&((*file)->idx_d->fs_block_size), 1, MPI_INT, 0, (*file)->idx_c->simulation_comm);
 
   (*file)->idx->flip_endian = 0;
 
   unsigned int endian = 1;
   char *c = (char*)&endian;
   if (*c)
-    (*file)->idx->endian = 1;
+    (*file)->idx->endian = PIDX_LITTLE_ENDIAN;
   else
-    (*file)->idx->endian = 0;
+    (*file)->idx->endian = PIDX_BIG_ENDIAN;
 
   return PIDX_success;
 }

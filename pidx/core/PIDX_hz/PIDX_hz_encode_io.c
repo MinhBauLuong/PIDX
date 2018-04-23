@@ -1,20 +1,43 @@
-/*****************************************************
- **  PIDX Parallel I/O Library      **
- **  Copyright (c) 2010-2014 University of Utah   **
- **  Scientific Computing and Imaging Institute   **
- **  72 S Central Campus Drive, Room 3750     **
- **  Salt Lake City, UT 84112       **
- **             **
- **  PIDX is licensed under the Creative Commons  **
- **  Attribution-NonCommercial-NoDerivatives 4.0  **
- **  International License. See LICENSE.md.   **
- **             **
- **  For information about this project see:  **
- **  http://www.cedmav.com/pidx       **
- **  or contact: pascucci@sci.utah.edu    **
- **  For support: PIDX-support@visus.net    **
- **             **
- *****************************************************/
+/*
+ * BSD 3-Clause License
+ * 
+ * Copyright (c) 2010-2018 ViSUS L.L.C., 
+ * Scientific Computing and Imaging Institute of the University of Utah
+ * 
+ * ViSUS L.L.C., 50 W. Broadway, Ste. 300, 84101-2044 Salt Lake City, UT
+ * University of Utah, 72 S Central Campus Dr, Room 3750, 84112 Salt Lake City, UT
+ *  
+ * All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * * Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
+ * 
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ * 
+ * * Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * 
+ * For additional information about this project contact: pascucci@acm.org
+ * For support: support@visus.net
+ * 
+ */
 
 
 #include "../../PIDX_inc.h"
@@ -23,7 +46,6 @@ static void bit32_reverse_endian(unsigned char* val, unsigned char *outbuf);
 static void bit64_reverse_endian(unsigned char* val, unsigned char *outbuf);
 
 static int write_samples(PIDX_hz_encode_id hz_id, int variable_index, unsigned long long hz_start_index, unsigned long long hz_count, unsigned char* hz_buffer, unsigned long long buffer_offset, PIDX_block_layout layout);
-
 static int read_samples(PIDX_hz_encode_id hz_id, int variable_index, unsigned long long hz_start_index, unsigned long long hz_count, unsigned char* hz_buffer, unsigned long long buffer_offset, PIDX_block_layout layout);
 
 static int opened_file_number = -1;
@@ -31,6 +53,7 @@ static uint32_t *headers;
 static int total_header_size = 0;
 static MPI_File fp = 0;
 static MPI_Status status;
+
 
 int PIDX_file_io_per_process(PIDX_hz_encode_id hz_id, PIDX_block_layout block_layout, int MODE)
 {
@@ -47,6 +70,7 @@ int PIDX_file_io_per_process(PIDX_hz_encode_id hz_id, PIDX_block_layout block_la
 
   index = 0, count = 0, send_index = 0;
 
+  // PROBABLY WRONG
   if (var0->hz_buffer->is_boundary_HZ_buffer == 1)
   {
     for(v = hz_id->first_index; v <= hz_id->last_index; v++)
@@ -226,6 +250,7 @@ static int write_samples(PIDX_hz_encode_id hz_id, int variable_index, unsigned l
     data_offset = file_index * bytes_per_datatype;
     data_offset += hz_id->idx_d->start_fs_block * hz_id->idx_d->fs_block_size;
 
+    // Adjusting for missing blocks
     block_negative_offset = PIDX_blocks_find_negative_offset(hz_id->idx->blocks_per_file, hz_id->idx->bits_per_block, block_number, layout);
 
     data_offset -= block_negative_offset * hz_id->idx_d->samples_per_block * bytes_per_datatype;
@@ -274,7 +299,7 @@ static int write_samples(PIDX_hz_encode_id hz_id, int variable_index, unsigned l
       }
     }
 
-    //if (hz_id->idx_c->lrank == 0)
+    //if (hz_id->idx_c->partition_rank == 0)
     //  fprintf(stderr, "[%d] Data offset %d data size %lld\n", variable_index, data_offset, file_count * bytes_per_datatype);
     ret = MPI_File_write_at(fp, data_offset, hz_buffer, file_count * bytes_per_datatype, MPI_BYTE, &status);
     if (ret != MPI_SUCCESS)

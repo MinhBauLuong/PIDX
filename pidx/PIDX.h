@@ -1,20 +1,43 @@
-/*****************************************************
- **  PIDX Parallel I/O Library                      **
- **  Copyright (c) 2010-2014 University of Utah     **
- **  Scientific Computing and Imaging Institute     **
- **  72 S Central Campus Drive, Room 3750           **
- **  Salt Lake City, UT 84112                       **
- **                                                 **
- **  PIDX is licensed under the Creative Commons    **
- **  Attribution-NonCommercial-NoDerivatives 4.0    **
- **  International License. See LICENSE.md.         **
- **                                                 **
- **  For information about this project see:        **
- **  http://www.cedmav.com/pidx                     **
- **  or contact: pascucci@sci.utah.edu              **
- **  For support: PIDX-support@visus.net            **
- **                                                 **
- *****************************************************/
+/*
+ * BSD 3-Clause License
+ * 
+ * Copyright (c) 2010-2018 ViSUS L.L.C., 
+ * Scientific Computing and Imaging Institute of the University of Utah
+ * 
+ * ViSUS L.L.C., 50 W. Broadway, Ste. 300, 84101-2044 Salt Lake City, UT
+ * University of Utah, 72 S Central Campus Dr, Room 3750, 84112 Salt Lake City, UT
+ *  
+ * All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * * Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
+ * 
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ * 
+ * * Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * 
+ * For additional information about this project contact: pascucci@acm.org
+ * For support: support@visus.net
+ * 
+ */
 
 /*
  * Local partition read write
@@ -105,11 +128,23 @@ PIDX_return_code PIDX_file_create(const char* filename, PIDX_flags flags, PIDX_a
 ///
 PIDX_return_code PIDX_file_open(const char* filename, PIDX_flags flags, PIDX_access access, PIDX_point dims, PIDX_file* file);
 
-
-
+/*
+ *  Implementation in PIDX_metadata_parse.c
+ */
+// PIDX_metadata_parse parse the metadata .idx file (used by PIDX_file_open)
+//
+// There are different implementations for different versions of the metadata file
+// PIDX_metadata_parse will use the corresponding file_open implementation
+// for the specific version requested
+//
+PIDX_return_code PIDX_metadata_parse(FILE *fp, PIDX_file* file, char* version);
+PIDX_return_code PIDX_metadata_parse_v6_0(FILE *fp, PIDX_file* file);
+PIDX_return_code PIDX_metadata_parse_v6_1(FILE *fp, PIDX_file* file);
 
 ///
 /// \brief PIDX_serial_file_open
+/// This function reads an existing IDX file in serial
+///
 /// \param filename
 /// \param flags
 /// \param dims
@@ -118,7 +153,10 @@ PIDX_return_code PIDX_file_open(const char* filename, PIDX_flags flags, PIDX_acc
 ///
 PIDX_return_code PIDX_serial_file_open(const char* filename, PIDX_flags flags, PIDX_point dims, PIDX_file* file);
 
-
+// There are different implementations for different versions of the metadata file
+// PIDX_file_open will use the corresponding file_open implementation for the specific version
+PIDX_return_code PIDX_serial_file_open_v6(const char* filename, PIDX_flags flags, PIDX_point dims, PIDX_file* file);
+PIDX_return_code PIDX_serial_file_open_v7(const char* filename, PIDX_flags flags, PIDX_point dims, PIDX_file* file);
 
 
 ///
@@ -170,28 +208,6 @@ PIDX_return_code PIDX_set_variable_count(PIDX_file file, int  variable_count);
 /// \return The number of variables.
 ///
 PIDX_return_code PIDX_get_variable_count(PIDX_file file, int* variable_count);
-
-
-
-///
-/// Sets the transformation from logical dims to the physical coordinates (commonly used to visualize the volume)
-/// \param file The IDX file handler.
-/// \param transform standard 4x4 transformation matrix (right-handed / OpenGL style), see http://www.dirsig.org/docs/new/affine.html.
-/// \return PIDX_return_code The error code returned by the function.
-/// It is PIDX_success if the task is completed correctly.
-///
-PIDX_return_code PIDX_set_transform(PIDX_file file, double transform[16]);
-
-
-
-///
-/// Gets the transformation from logical dims to the physical coordinates (commonly used to visualize the volume)
-/// \param file The IDX file handler.
-/// \return transform: will return the standard 4x4 transformation matrix (right-handed / OpenGL style), see http://www.dirsig.org/docs/new/affine.html.
-/// \return PIDX_return_code The error code returned by the function.
-/// It is PIDX_success if the task is completed correctly.
-///
-PIDX_return_code PIDX_get_transform(PIDX_file file, double transform[16]);
 
 
 
@@ -325,6 +341,26 @@ PIDX_return_code PIDX_get_restructuring_box(PIDX_file file, PIDX_point reg_patch
 
 
 ///
+/// \brief PIDX_set_physical_dims
+/// \param file
+/// \param dims
+/// \return
+///
+PIDX_return_code PIDX_set_physical_dims(PIDX_file file, PIDX_physical_point dims);
+
+
+
+///
+/// \brief PIDX_get_physical_dims
+/// \param file
+/// \param dims
+/// \return
+///
+PIDX_return_code PIDX_get_physical_dims(PIDX_file file, PIDX_physical_point dims);
+
+
+
+///
 /// \brief PIDX_set_first_tstep
 /// \param file
 /// \param tstep
@@ -420,7 +456,7 @@ PIDX_return_code PIDX_get_lossy_compression_bit_rate(PIDX_file file, int *compre
 /// \param io_type
 /// \return
 ///
-PIDX_return_code PIDX_set_io_mode(PIDX_file file, int io_type);
+PIDX_return_code PIDX_set_io_mode(PIDX_file file, enum PIDX_io_type io_type);
 
 
 
@@ -430,11 +466,11 @@ PIDX_return_code PIDX_set_io_mode(PIDX_file file, int io_type);
 /// \param io_type
 /// \return
 ///
-PIDX_return_code PIDX_get_io_mode(PIDX_file file, int* io_type);
+PIDX_return_code PIDX_get_io_mode(PIDX_file file, enum PIDX_io_type* io_type);
 
 
 
-
+#if 0
 ///
 /// \brief PIDX_set_wavelet_level
 /// \param file
@@ -452,7 +488,7 @@ PIDX_return_code PIDX_set_wavelet_level(PIDX_file file, int w_type);
 /// \return
 ///
 PIDX_return_code PIDX_get_wavelet_level(PIDX_file file, int* w_type);
-
+#endif
 
 
 ///
@@ -553,7 +589,7 @@ PIDX_return_code PIDX_get_cache_time_step(PIDX_file file, int* ts);
 
 
 
-
+#if 0
 ///
 /// \brief PIDX_set_process_decomposition
 /// \param file
@@ -575,7 +611,7 @@ PIDX_return_code PIDX_set_process_decomposition(PIDX_file file, int np_x, int np
 /// \return
 ///
 PIDX_return_code PIDX_get_process_decomposition(PIDX_file file, int* np_x, int* np_y, int* np_z);
-
+#endif
 
 ///
 /// \brief PIDX_set_comm
@@ -631,7 +667,22 @@ PIDX_return_code PIDX_variable_write_data_layout(PIDX_variable variable, PIDX_po
 /// \param data_layout
 /// \return
 ///
-PIDX_return_code PIDX_variable_write_particle_data_layout(PIDX_variable variable, PIDX_point offset, PIDX_point dims, const void* read_from_this_buffer, int number_of_particles, PIDX_data_layout data_layout);
+PIDX_return_code PIDX_variable_write_particle_data_layout(PIDX_variable variable, PIDX_point offset, PIDX_point dims, const void* read_from_this_buffer, size_t number_of_particles, PIDX_data_layout data_layout);
+
+
+
+
+///
+/// \brief PIDX_variable_write_particle_data_physical_layout
+/// \param variable
+/// \param offset
+/// \param dims
+/// \param read_from_this_buffer
+/// \param number_of_particles
+/// \param data_layout
+/// \return
+///
+PIDX_return_code PIDX_variable_write_particle_data_physical_layout(PIDX_variable variable, PIDX_physical_point offset, PIDX_physical_point dims, const void* read_from_this_buffer, size_t number_of_particles, PIDX_data_layout data_layout);
 
 
 
@@ -666,6 +717,23 @@ PIDX_return_code PIDX_get_next_variable(PIDX_file file, PIDX_variable* variable)
 /// \return
 ///
 PIDX_return_code PIDX_variable_read_data_layout(PIDX_variable variable, PIDX_point offset, PIDX_point dims, void* read_from_this_buffer, PIDX_data_layout data_layout);
+
+
+
+
+///
+/// \brief PIDX_variable_read_particle_data_layout
+/// \param variable
+/// \param offset
+/// \param dims
+/// \param write_to_this_buffer A buffer which will be allocated by PIDX to hold
+///           sufficient storage for the particles being loaded.
+/// \param number_of_particles The number of particles read
+/// \param data_layout
+/// \return
+///
+PIDX_return_code PIDX_variable_read_particle_data_layout(PIDX_variable variable, PIDX_physical_point offset, PIDX_physical_point dims, void** write_to_this_buffer, size_t* number_of_particles, PIDX_data_layout data_layout);
+
 
 
 
@@ -774,7 +842,7 @@ PIDX_return_code PIDX_write_variable(PIDX_file file, PIDX_variable variable, PID
 /// \param cache
 /// \return
 ///
-PIDX_return_code PIDX_set_meta_data_cache(PIDX_file file, PIDX_meta_data_cache cache);
+PIDX_return_code PIDX_set_meta_data_cache(PIDX_file file, PIDX_metadata_cache cache);
 
 
 
@@ -785,7 +853,7 @@ PIDX_return_code PIDX_set_meta_data_cache(PIDX_file file, PIDX_meta_data_cache c
 /// \param cache
 /// \return
 ///
-PIDX_return_code PIDX_get_meta_data_cache(PIDX_file file, PIDX_meta_data_cache* cache);
+PIDX_return_code PIDX_get_meta_data_cache(PIDX_file file, PIDX_metadata_cache* cache);
 
 
 

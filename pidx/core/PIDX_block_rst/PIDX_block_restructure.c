@@ -1,20 +1,43 @@
-/*****************************************************
- **  PIDX Parallel I/O Library  **
- **  Copyright (c) 2010-2014 University of Utah   **
- **  Scientific Computing and Imaging Institute   **
- **  72 S Central Campus Drive, Room 3750   **
- **  Salt Lake City, UT 84112   **
- **   **
- **  PIDX is licensed under the Creative Commons  **
- **  Attribution-NonCommercial-NoDerivatives 4.0  **
- **  International License. See LICENSE.md.   **
- **   **
- **  For information about this project see:  **
- **  http://www.cedmav.com/pidx   **
- **  or contact: pascucci@sci.utah.edu  **
- **  For support: PIDX-support@visus.net  **
- **   **
- *****************************************************/
+/*
+ * BSD 3-Clause License
+ * 
+ * Copyright (c) 2010-2018 ViSUS L.L.C., 
+ * Scientific Computing and Imaging Institute of the University of Utah
+ * 
+ * ViSUS L.L.C., 50 W. Broadway, Ste. 300, 84101-2044 Salt Lake City, UT
+ * University of Utah, 72 S Central Campus Dr, Room 3750, 84112 Salt Lake City, UT
+ *  
+ * All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * * Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
+ * 
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ * 
+ * * Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * 
+ * For additional information about this project contact: pascucci@acm.org
+ * For support: support@visus.net
+ * 
+ */
 
 /**
  * \file PIDX_chunk.c
@@ -120,7 +143,7 @@ PIDX_return_code PIDX_chunk_buf_create(PIDX_chunk_id chunk_id)
     int bytes_per_value = (var->bpv / CHAR_BIT) * var->vps;
 
     PIDX_super_patch out_patch = var->chunked_super_patch;
-    unsigned long long *group_size = out_patch->restructured_patch->size;
+    size_t *group_size = out_patch->restructured_patch->size;
     unsigned long long num_elems_group = 1;
     int d;
     for (d = 0; d < PIDX_MAX_DIMENSIONS; ++d)
@@ -132,7 +155,7 @@ PIDX_return_code PIDX_chunk_buf_create(PIDX_chunk_id chunk_id)
     }
 
     // malloc the storage for all elements in the output array
-    // printf("[Chunking] Buffer size of %d = %d\n", chunk_id->idx_c->grank, num_elems_group);
+    // printf("[Chunking] Buffer size of %d = %d\n", chunk_id->idx_c->simulation_rank, num_elems_group);
     out_patch->restructured_patch->buffer = malloc(bytes_per_value * num_elems_group);
     memset(out_patch->restructured_patch->buffer, 0, bytes_per_value * num_elems_group);
     //printf("\n \n Out Patch is before chunking: \n");
@@ -218,9 +241,9 @@ PIDX_return_code PIDX_chunk(PIDX_chunk_id chunk_id, int MODE)
   }
 
   // compute the intra compression block strides
-  unsigned long long *chunk_size = chunk_id->idx->chunk_size;
+  size_t *chunk_size = chunk_id->idx->chunk_size;
   //printf("Chunk size is %lld\n", *chunk_size);
-  unsigned long long  cbz = 1;
+  size_t  cbz = 1;
   for (d = 0; d < PIDX_MAX_DIMENSIONS; ++d){
     cbz = cbz * chunk_size[d];
     //printf("some terms are %lld, %lld, %d\n", cbz, chunk_size[d], PIDX_MAX_DIMENSIONS);

@@ -1,3 +1,43 @@
+/*
+ * BSD 3-Clause License
+ * 
+ * Copyright (c) 2010-2018 ViSUS L.L.C., 
+ * Scientific Computing and Imaging Institute of the University of Utah
+ * 
+ * ViSUS L.L.C., 50 W. Broadway, Ste. 300, 84101-2044 Salt Lake City, UT
+ * University of Utah, 72 S Central Campus Dr, Room 3750, 84112 Salt Lake City, UT
+ *  
+ * All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * * Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
+ * 
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ * 
+ * * Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * 
+ * For additional information about this project contact: pascucci@acm.org
+ * For support: support@visus.net
+ * 
+ */
 #include "../../PIDX_inc.h"
 
 
@@ -63,55 +103,6 @@ PIDX_return_code destroy_agg_io_buffer(PIDX_io file, int svi, int evi)
 }
 
 
-PIDX_return_code create_async_buffers(PIDX_io file, int gi)
-{
-  PIDX_variable_group var_grp = file->idx->variable_grp[gi];
-
-  file->idx_d->status1 = malloc(sizeof(*(file->idx_d->status1)) * (var_grp->agg_level - var_grp->shared_start_layout_index));
-  memset(file->idx_d->status1, 0, sizeof(*(file->idx_d->status1)) * (var_grp->agg_level - var_grp->shared_start_layout_index));
-
-  file->idx_d->request1 = malloc(sizeof(*(file->idx_d->request1)) * (var_grp->agg_level - var_grp->shared_start_layout_index));
-  memset(file->idx_d->request1, 0, sizeof(*(file->idx_d->request1)) * (var_grp->agg_level - var_grp->shared_start_layout_index));
-
-  file->idx_d->fp1 = malloc(sizeof(*(file->idx_d->fp1)) * (var_grp->agg_level - var_grp->shared_start_layout_index));
-  memset(file->idx_d->fp1, 0, sizeof(*(file->idx_d->fp1)) * (var_grp->agg_level - var_grp->shared_start_layout_index));
-
-  return PIDX_success;
-}
-
-
-PIDX_return_code wait_and_destroy_async_buffers(PIDX_io file, int gi)
-{
-  PIDX_variable_group var_grp = file->idx->variable_grp[gi];
-
-  int sli = var_grp->shared_start_layout_index;
-  int agg_i = var_grp->agg_level;
-
-  assert (sli == 0);
-  int i = 0;
-  int ret;
-  for (i = sli; i < (agg_i); i++)
-  {
-    if (file->idx_d->request1[i - sli] != 0)
-    {
-      ret = MPI_Wait(&(file->idx_d->request1[i - sli]), &(file->idx_d->status1[i - sli]));
-      if (ret != MPI_SUCCESS)
-      {
-          fprintf(stderr,"File %s Line %d\n", __FILE__, __LINE__);
-          return PIDX_err_file;
-      }
-
-      MPI_File_close(&(file->idx_d->fp1[i - sli]));
-    }
-  }
-
-  free(file->idx_d->status1);
-  free(file->idx_d->request1);
-  free(file->idx_d->fp1);
-
-  return PIDX_success;
-}
-
 
 PIDX_return_code finalize_aggregation(PIDX_io file, int gi, int start_index)
 {
@@ -125,7 +116,7 @@ PIDX_return_code finalize_aggregation(PIDX_io file, int gi, int start_index)
   int sli = var_grp->shared_start_layout_index;
   int agg_i = var_grp->agg_level;
 
-  //fprintf(stderr, "[%d] sli and agg_i %d %d si %d\n", file->idx_c->grank, sli, agg_i, start_index);
+  //fprintf(stderr, "[%d] sli and agg_i %d %d si %d\n", file->idx_c->simulation_rank, sli, agg_i, start_index);
   for (i = sli; i < agg_i; i++)
   {
     i_1 = i - sli;

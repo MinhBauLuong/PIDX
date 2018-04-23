@@ -1,3 +1,43 @@
+/*
+ * BSD 3-Clause License
+ * 
+ * Copyright (c) 2010-2018 ViSUS L.L.C., 
+ * Scientific Computing and Imaging Institute of the University of Utah
+ * 
+ * ViSUS L.L.C., 50 W. Broadway, Ste. 300, 84101-2044 Salt Lake City, UT
+ * University of Utah, 72 S Central Campus Dr, Room 3750, 84112 Salt Lake City, UT
+ *  
+ * All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * * Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
+ * 
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ * 
+ * * Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * 
+ * For additional information about this project contact: pascucci@acm.org
+ * For support: support@visus.net
+ * 
+ */
 #include "../../PIDX_inc.h"
 
 #define PIDX_ACTIVE_TARGET 1
@@ -57,7 +97,7 @@ static PIDX_return_code create_window(PIDX_agg_id id, Agg_buffer ab)
     int tcs = id->idx->chunk_size[0] * id->idx->chunk_size[1] * id->idx->chunk_size[2];
     int bpdt = tcs * (var->bpv/8) / (id->idx->compression_factor);
 
-    ret = MPI_Win_create(ab->buffer, ab->buffer_size, bpdt, MPI_INFO_NULL, id->idx_c->local_comm, &(id->win));
+    ret = MPI_Win_create(ab->buffer, ab->buffer_size, bpdt, MPI_INFO_NULL, id->idx_c->partition_comm, &(id->win));
     if (ret != MPI_SUCCESS)
     {
       fprintf(stderr,"File %s Line %d\n", __FILE__, __LINE__);
@@ -66,7 +106,7 @@ static PIDX_return_code create_window(PIDX_agg_id id, Agg_buffer ab)
   }
   else
   {
-    ret = MPI_Win_create(0, 0, 1, MPI_INFO_NULL, id->idx_c->local_comm, &(id->win));
+    ret = MPI_Win_create(0, 0, 1, MPI_INFO_NULL, id->idx_c->partition_comm, &(id->win));
     if (ret != MPI_SUCCESS)
     {
       fprintf(stderr,"File %s Line %d\n", __FILE__, __LINE__);
@@ -270,7 +310,7 @@ static PIDX_return_code aggregate(PIDX_agg_id id, int variable_index, unsigned l
 
   if (start_agg_index != end_agg_index)
   {
-    if (target_rank != id->idx_c->lrank)
+    if (target_rank != id->idx_c->partition_rank)
     {
 #ifndef PIDX_ACTIVE_TARGET
       MPI_Win_lock(MPI_LOCK_SHARED, target_rank, 0 , id->win);
@@ -314,7 +354,7 @@ static PIDX_return_code aggregate(PIDX_agg_id id, int variable_index, unsigned l
 
     for (itr = 0; itr < end_agg_index - start_agg_index - 1; itr++)
     {
-      if (target_rank != id->idx_c->lrank)
+      if (target_rank != id->idx_c->partition_rank)
       {
 #ifndef PIDX_ACTIVE_TARGET
         MPI_Win_lock(MPI_LOCK_SHARED, target_rank + ab->aggregator_interval, 0, id->win);
@@ -355,7 +395,7 @@ static PIDX_return_code aggregate(PIDX_agg_id id, int variable_index, unsigned l
       }
     }
 
-    if (target_rank + ab->aggregator_interval != id->idx_c->lrank)
+    if (target_rank + ab->aggregator_interval != id->idx_c->partition_rank)
     {
 #ifndef PIDX_ACTIVE_TARGET
       MPI_Win_lock(MPI_LOCK_SHARED, target_rank + ab->aggregator_interval, 0, id->win);
@@ -397,7 +437,7 @@ static PIDX_return_code aggregate(PIDX_agg_id id, int variable_index, unsigned l
   }
   else
   {
-    if(target_rank != id->idx_c->lrank)
+    if(target_rank != id->idx_c->partition_rank)
     {
 #ifndef PIDX_ACTIVE_TARGET
       MPI_Win_lock(MPI_LOCK_SHARED, target_rank, 0 , id->win);

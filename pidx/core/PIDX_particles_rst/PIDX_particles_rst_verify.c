@@ -16,34 +16,16 @@
  **                                                 **
  *****************************************************/
 
- /**
- * \file PIDX_meta_data_cache.h
+/**
+ * \file PIDX_rst.c
  *
  * \author Sidharth Kumar
  * \date   10/09/14
  *
+ * Implementation of all the functions
+ * declared in PIDX_rst.h
  *
  */
- 
-#ifndef __PIDX_META_DATA_CACHE_H
-#define __PIDX_META_DATA_CACHE_H
 
+#include "../../PIDX_inc.h"
 
-struct PIDX_meta_data_cache_struct
-{
-  int is_set;
-  int element_count;
-  int *xyz_mapped_index;
-  int *hz_level;
-  int *index_level;
-};
-typedef struct PIDX_meta_data_cache_struct* PIDX_meta_data_cache;
-
-
-PIDX_return_code PIDX_create_meta_data_cache(PIDX_meta_data_cache* cache);
-
-
-PIDX_return_code PIDX_free_meta_data_cache(PIDX_meta_data_cache cache);
-
-
-#endif

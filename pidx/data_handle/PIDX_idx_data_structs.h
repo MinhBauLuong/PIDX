@@ -1,20 +1,43 @@
-/*****************************************************
- **  PIDX Parallel I/O Library                      **
- **  Copyright (c) 2010-2014 University of Utah     **
- **  Scientific Computing and Imaging Institute     **
- **  72 S Central Campus Drive, Room 3750           **
- **  Salt Lake City, UT 84112                       **
- **                                                 **
- **  PIDX is licensed under the Creative Commons    **
- **  Attribution-NonCommercial-NoDerivatives 4.0    **
- **  International License. See LICENSE.md.         **
- **                                                 **
- **  For information about this project see:        **
- **  http://www.cedmav.com/pidx                     **
- **  or contact: pascucci@sci.utah.edu              **
- **  For support: PIDX-support@visus.net            **
- **                                                 **
- *****************************************************/
+/*
+ * BSD 3-Clause License
+ * 
+ * Copyright (c) 2010-2018 ViSUS L.L.C., 
+ * Scientific Computing and Imaging Institute of the University of Utah
+ * 
+ * ViSUS L.L.C., 50 W. Broadway, Ste. 300, 84101-2044 Salt Lake City, UT
+ * University of Utah, 72 S Central Campus Dr, Room 3750, 84112 Salt Lake City, UT
+ *  
+ * All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * * Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
+ * 
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ * 
+ * * Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * 
+ * For additional information about this project contact: pascucci@acm.org
+ * For support: support@visus.net
+ * 
+ */
 
 /**
  * \file PIDX_idx_data_structs.h
@@ -32,81 +55,9 @@
 #define __PIDX_IDX_DATA_STRUCTS_H
 
 #include "PIDX_memory_layout_data_structs.h"
+#include "PIDX_timming_data_structs.h"
+#include "PIDX_comm_structs.h"
 
-struct PIDX_timming_struct
-{
-  //double a1, a2, a3, a4, a5;
-  double SX, EX;
-  double sim_start, sim_end;
-
-  double init_start, init_end;
-  double set_reg_box_start, set_reg_box_end;
-  double bit_string_start, bit_string_end;
-  double layout_start, layout_end;
-  double header_io_start, header_io_end;
-  double group_cleanup_start, group_cleanup_end;
-  double partition_start, partition_end;
-  double partition_cleanup_start, partition_cleanup_end;
-
-  double ***w_stencil_comm_x_odd_start, ***w_stencil_comm_x_odd_end;
-  double ***w_stencil_comm_y_odd_start, ***w_stencil_comm_y_odd_end;
-  double ***w_stencil_comm_z_odd_start, ***w_stencil_comm_z_odd_end;
-
-  double ***w_stencil_comm_x_even_start, ***w_stencil_comm_x_even_end;
-  double ***w_stencil_comm_y_even_start, ***w_stencil_comm_y_even_end;
-  double ***w_stencil_comm_z_even_start, ***w_stencil_comm_z_even_end;
-
-  double ***w_stencil_comp_x_odd_start, ***w_stencil_comp_x_odd_end;
-  double ***w_stencil_comp_y_odd_start, ***w_stencil_comp_y_odd_end;
-  double ***w_stencil_comp_z_odd_start, ***w_stencil_comp_z_odd_end;
-
-  double ***w_stencil_comp_x_even_start, ***w_stencil_comp_x_even_end;
-  double ***w_stencil_comp_y_even_start, ***w_stencil_comp_y_even_end;
-  double ***w_stencil_comp_z_even_start, ***w_stencil_comp_z_even_end;
-
-  double ***w_rst_comp_x_start, ***w_rst_comp_x_end;
-  double ***w_rst_comp_y_start, ***w_rst_comp_y_end;
-  double ***w_rst_comp_z_start, ***w_rst_comp_z_end;
-
-  double **rst_init_start, **rst_init_end;
-  double **rst_meta_data_create_start, **rst_meta_data_create_end;
-  double **rst_meta_data_io_start, **rst_meta_data_io_end;
-  double **rst_buffer_start, **rst_buffer_end;
-  double **rst_write_read_start, **rst_write_read_end;
-  double **rst_buff_agg_start, **rst_buff_agg_end;
-  double **rst_buff_agg_free_start, **rst_buff_agg_free_end;
-  double **rst_buff_agg_io_start, **rst_buff_agg_io_end;
-  double **rst_cleanup_start, **rst_cleanup_end;
-
-  double **hz_init_start, **hz_init_end;
-  double **hz_meta_start, **hz_meta_end;
-  double **hz_buffer_start, **hz_buffer_end;
-  double **hz_start, **hz_end;
-  double **hz_compress_start, **hz_compress_end;
-  double **hz_buffer_free_start, **hz_buffer_free_end;
-  double **hz_cleanup_start, **hz_cleanup_end;
-  double ***hz_io_start, ***hz_io_end;
-
-  double **chunk_init_start, **chunk_init_end;
-  double **chunk_meta_start, **chunk_meta_end;
-  double **chunk_buffer_start, **chunk_buffer_end;
-  double **chunk_start, **chunk_end;
-  double **chunk_buffer_free_start, **chunk_buffer_free_end;
-  double **chunk_cleanup_start, **chunk_cleanup_end;
-
-  double **compression_init_start, **compression_init_end;
-  double **compression_start, **compression_end;
-
-  double ***agg_init_start, ***agg_init_end;
-  double ***agg_meta_start, ***agg_meta_end;
-  double ***agg_buf_start, ***agg_buf_end;
-  double ***agg_start, ***agg_end;
-  double ***agg_compress_start, ***agg_compress_end;
-  double ***agg_meta_cleanup_start, ***agg_meta_cleanup_end;
-
-  double **io_start, **io_end;
-};
-typedef struct PIDX_timming_struct* PIDX_time;
 
 
 struct PIDX_variable_struct
@@ -164,73 +115,48 @@ struct PIDX_variable_group_struct
 typedef struct PIDX_variable_group_struct* PIDX_variable_group;
 
 
-/// Communicator related struct
-struct idx_comm_struct
+
+
+
+
+struct idx_metadata_cache_struct
 {
-  int lrank;
-  int lnprocs;
-
-  int grank;
-  int grank_x;
-  int grank_y;
-  int grank_z;
-
-  int gnprocs;
-  int gnproc_x;
-  int gnproc_y;
-  int gnproc_z;
-
-  int rrank;
-  int rnprocs;
-
-  /// Names
-  MPI_Comm global_comm;
-  MPI_Comm local_comm;
-  MPI_Comm rst_comm;
+  PIDX_metadata_cache meta_data_cache;
 };
-typedef struct idx_comm_struct* idx_comm;
-
-
-
-/// Communicator related struct
-struct idx_meta_data_cache_struct
-{
-  PIDX_meta_data_cache meta_data_cache;
-};
-typedef struct idx_meta_data_cache_struct* idx_meta_data_cache;
+typedef struct idx_metadata_cache_struct* idx_metadata_cache;
 
 
 /// idx_file
 struct idx_file_struct
 {
-  int io_type;
-  int current_time_step;
+  enum PIDX_io_type io_type;              /// I/O format and layout we want to use
+  
+  int current_time_step;                  /// The current timestep selected
 
-  int variable_count;
+  int variable_count;                     /// The number of variables contained in the dataset
   int variable_group_count;
   int group_index_tracker;
   PIDX_variable_group variable_grp[16];
   
   char agg_list_filename[1024];
 
-  char filename[1024];
+  char filename[1024];                    /// The idx file path
   char filename_partition[1024];
   char filename_template[1024];
   char filename_template_partition[1024];
 
-  int first_tstep;
-  int last_tstep;
+  int first_tstep;                        /// Index of the frist timestep
+  int last_tstep;                         /// Index of the last timestep
 
-  int bits_per_block;
-  int blocks_per_file;
-  unsigned long long bounds[PIDX_MAX_DIMENSIONS];
-  unsigned long long box_bounds[PIDX_MAX_DIMENSIONS];
-  double transform[16];
+  int bits_per_block;                     /// Number of bits per block
+  int blocks_per_file;                    /// Number of blocks per file
+  size_t bounds[PIDX_MAX_DIMENSIONS];     /// Bounds of the dataset
+  size_t box_bounds[PIDX_MAX_DIMENSIONS]; /// Bounds of the box query
+  double physical_bounds[PIDX_MAX_DIMENSIONS];
+  double physical_box_bounds[PIDX_MAX_DIMENSIONS];
+  
   char bitSequence[512];
   char bitPattern[512];
-
-
-
 
   /// 0 No aggregation
   /// 1 Only aggregation
@@ -239,13 +165,13 @@ struct idx_file_struct
   int compression_type;
   int compression_factor;
   float compression_bit_rate;
-  unsigned long long chunk_size[PIDX_MAX_DIMENSIONS];
+  size_t chunk_size[PIDX_MAX_DIMENSIONS];
 
   int file_zero_merge;
 
   /// 1 for little endian
   /// 0 for big endian
-  int endian;
+  enum PIDX_endian_type endian;                /// Endianess of the data
 
   /// 1 for flipping endian
   /// 0 for big endian
@@ -262,16 +188,9 @@ typedef struct idx_file_struct* idx_dataset;
 struct idx_dataset_derived_metadata_struct
 {
   int pidx_version;
+  char metadata_version[8];
   //int io_mode;
 
-  int w_nx;
-  int w_px;
-  int w_ny;
-  int w_py;
-  int w_nz;
-  int w_pz;
-  int wavelet_levels;
-  int wavelet_imeplementation_type;
 
   PIDX_restructured_grid restructured_grid;
 
@@ -285,17 +204,12 @@ struct idx_dataset_derived_metadata_struct
 
   Agg_buffer **agg_buffer;
 
-  int color;
   int partition_count[PIDX_MAX_DIMENSIONS];
   int partition_size[PIDX_MAX_DIMENSIONS];
   int partition_offset[PIDX_MAX_DIMENSIONS];
   
   int start_layout_index;
   int end_layout_index;
-
-  MPI_Status *status1;
-  MPI_File *fp1;
-  MPI_Request *request1;
 
   int layout_count;
   int reduced_res_from;
@@ -306,7 +220,6 @@ struct idx_dataset_derived_metadata_struct
   int raw_io_pipe_length;
 
   int aggregator_multiplier;
-  int data_core_count;
 
   //int shared_block_level;
   int total_partiton_level;

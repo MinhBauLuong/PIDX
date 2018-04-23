@@ -1,3 +1,43 @@
+/*
+ * BSD 3-Clause License
+ * 
+ * Copyright (c) 2010-2018 ViSUS L.L.C., 
+ * Scientific Computing and Imaging Institute of the University of Utah
+ * 
+ * ViSUS L.L.C., 50 W. Broadway, Ste. 300, 84101-2044 Salt Lake City, UT
+ * University of Utah, 72 S Central Campus Dr, Room 3750, 84112 Salt Lake City, UT
+ *  
+ * All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * * Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer.
+ * 
+ * * Redistributions in binary form must reproduce the above copyright notice,
+ * this list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ * 
+ * * Neither the name of the copyright holder nor the names of its
+ * contributors may be used to endorse or promote products derived from
+ * this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * 
+ * For additional information about this project contact: pascucci@acm.org
+ * For support: support@visus.net
+ * 
+ */
 #include "../../PIDX_inc.h"
 
 static PIDX_return_code populate_idx_block_layout(PIDX_io file, PIDX_block_layout global_layout, PIDX_block_layout* layout_by_level, int start_layout_index, int end_layout_index, int layout_count, int group_index, int start_index, int hz_level_from, int hz_level_to);
@@ -111,7 +151,7 @@ static PIDX_return_code populate_idx_layout(PIDX_io file, int gi, int start_var_
     return PIDX_err_file;
   }
 
-  //fprintf(stderr, "MH %d BS %s F %d T %d\n", file->idx_d->maxh, file->idx->bitSequence, file->idx_d->reduced_res_from, file->idx_d->reduced_res_to);
+  //fprintf(stderr, "MH %d BS %s F %d T %d [%d %d %d]\n", file->idx_d->maxh, file->idx->bitSequence, file->idx_d->reduced_res_from, file->idx_d->reduced_res_to, file->idx->box_bounds[0], file->idx->box_bounds[1], file->idx->box_bounds[2]);
 
   ret_code = PIDX_blocks_create_layout (bounding_box, file->idx_d->maxh, file->idx->bits_per_block,  file->idx->bitPattern, per_patch_local_block_layout, file->idx_d->reduced_res_from, file->idx_d->reduced_res_to);
   if (ret_code != PIDX_success)
@@ -168,11 +208,16 @@ static PIDX_return_code populate_idx_layout(PIDX_io file, int gi, int start_var_
   {
     int level_count = 1;
     for (i = block_layout->resolution_from; i <= file->idx->bits_per_block; i++)
-      MPI_Allreduce(all_patch_local_block_layout->hz_block_number_array[i], block_layout->hz_block_number_array[i], level_count, MPI_INT, MPI_BOR, file->idx_c->local_comm);
+    {
+      //if (i >= file->idx_d->maxh)
+      //  continue;
+
+      MPI_Allreduce(all_patch_local_block_layout->hz_block_number_array[i], block_layout->hz_block_number_array[i], level_count, MPI_INT, MPI_BOR, file->idx_c->partition_comm);
+    }
 
     for (i = file->idx->bits_per_block + 1; i < (block_layout->resolution_to); i++)
     {
-      MPI_Allreduce(all_patch_local_block_layout->hz_block_number_array[i], block_layout->hz_block_number_array[i], level_count, MPI_INT, MPI_BOR, file->idx_c->local_comm);
+      MPI_Allreduce(all_patch_local_block_layout->hz_block_number_array[i], block_layout->hz_block_number_array[i], level_count, MPI_INT, MPI_BOR, file->idx_c->partition_comm);
       level_count = level_count * 2;
     }
   }
@@ -183,7 +228,7 @@ static PIDX_return_code populate_idx_layout(PIDX_io file, int gi, int start_var_
     {
       if (i >= block_layout->resolution_from)
       {
-        MPI_Allreduce(all_patch_local_block_layout->hz_block_number_array[i], block_layout->hz_block_number_array[i], level_count, MPI_INT, MPI_BOR, file->idx_c->local_comm);
+        MPI_Allreduce(all_patch_local_block_layout->hz_block_number_array[i], block_layout->hz_block_number_array[i], level_count, MPI_INT, MPI_BOR, file->idx_c->partition_comm);
       }
       level_count = level_count * 2;
     }
@@ -241,7 +286,7 @@ static PIDX_return_code populate_idx_layout(PIDX_io file, int gi, int start_var_
       ctr = ctr * 2;
     }
 
-    //if (file->idx_c->lnprocsrank == 4)
+    //if (file->idx_c->partition_nprocsrank == 4)
     //  PIDX_blocks_print_layout(block_layout);
   }
   else
@@ -340,7 +385,12 @@ static PIDX_return_code populate_idx_block_layout(PIDX_io file, PIDX_block_layou
     }
 
     for (j = lower_hz_level ; j < file->idx->bits_per_block + 1 ; j++)
+    {
+      if (j >= file->idx_d->maxh)
+        continue;
+
       memcpy(block_layout->hz_block_number_array[j], layout_by_level[0]->hz_block_number_array[j], sizeof(int));
+    }
 
     ctr = 1;
     int temp_level = file->idx->bits_per_block + log2(file->idx->blocks_per_file) + 1;
@@ -500,7 +550,7 @@ static PIDX_return_code populate_idx_block_layout(PIDX_io file, PIDX_block_layou
     }
   }
 
-  //if (file->idx_c->grank == 0)
+  //if (file->idx_c->simulation_rank == 0)
   //  PIDX_blocks_print_layout(block_layout, file->idx->bits_per_block);
 
   return PIDX_success;
